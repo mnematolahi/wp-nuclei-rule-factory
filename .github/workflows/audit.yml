@@ -1,0 +1,117 @@
+name: WP Nuclei Templates Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_url:
+        description: 'GitHub URL of nuclei-templates repo (e.g. https://github.com/projectdiscovery/nuclei-templates)'
+        required: false
+        default: ''
+      dir:
+        description: 'Directory inside repo to scan (e.g. nuclei-templates/wordpress)'
+        required: false
+        default: 'nuclei-templates'
+      limit:
+        description: 'Limit number of YAML files to scan (0 = all)'
+        required: false
+        default: '0'
+      wordfence_token:
+        description: 'Wordfence API token (optional, for find_matches.py)'
+        required: false
+        default: ''
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Checkout nuclei-templates repo
+        if: ${{ inputs.repo_url != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ fromJSON('{"repo_url":"' + inputs.repo_url + '"}').repo_url || '' }}
+          path: nuclei-templates-ext
+          token: ${{ github.token }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Determine scan directory
+        id: scan_dir
+        run: |
+          if [ -d "nuclei-templates-ext" ]; then
+            echo "dir=nuclei-templates-ext" >> $GITHUB_OUTPUT
+          else
+            echo "dir=nuclei-templates" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run audit_templates.py
+        run: |
+          python audit_templates.py --dir "${{ steps.scan_dir.outputs.dir }}/${{ inputs.dir }}" --limit ${{ inputs.limit }} > audit_report.txt 2>&1 || true
+          cat audit_report.txt
+
+      - name: Run check_plugins.py
+        run: |
+          python check_plugins.py --dir "${{ steps.scan_dir.outputs.dir }}/${{ inputs.dir }}" --limit ${{ inputs.limit }} > plugins_report.txt 2>&1 || true
+          cat plugins_report.txt
+
+      - name: Run find_matches.py
+        if: ${{ inputs.wordfence_token != '' }}
+        env:
+          WF_API_TOKEN: ${{ inputs.wordfence_token }}
+        run: |
+          python find_matches.py --dir "${{ steps.scan_dir.outputs.dir }}/${{ inputs.dir }}" > matches_report.txt 2>&1 || true
+          cat matches_report.txt
+
+      - name: Generate final summary
+        run: |
+          {
+            echo "=========================================="
+            echo "  WP Nuclei Templates Audit Report"
+            echo "  Generated at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "=========================================="
+            echo ""
+            echo "## Audit Templates"
+            echo '```'
+            cat audit_report.txt
+            echo '```'
+            echo ""
+            echo "## WordPress.org Slugs Check"
+            echo '```'
+            cat plugins_report.txt
+            echo '```'
+            if [ -f matches_report.txt ]; then
+              echo ""
+              echo "## Wordfence Matches"
+              echo '```'
+              cat matches_report.txt
+              echo '```'
+            fi
+            echo ""
+            echo "=========================================="
+            echo "  End of Report"
+            echo "=========================================="
+          } > final_report.md
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-reports
+          path: |
+            audit_report.txt
+            plugins_report.txt
+            matches_report.txt
+            final_report.md
+          retention-days: 30
+
+      - name: Print final report
+        run: cat final_report.md
