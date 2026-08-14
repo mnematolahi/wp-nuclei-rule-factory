@@ -21,9 +21,5 @@ env/
 Thumbs.db
 .DS_Store
 
-# Test data
-test_yamls/
-test_yamls - Copy/
-
 # Secrets
 *.env
