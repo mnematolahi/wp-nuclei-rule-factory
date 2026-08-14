@@ -1,0 +1,20 @@
+{
+    "docker_image": "wordpress:latest",
+    "mysql_image": "mysql:8.0",
+    "mysql_database": "testdb",
+    "nuclei_path": "nuclei",
+    "nuclei_docker_image": "projectdiscovery/nuclei:latest",
+    "nuclei_timeout": 120,
+    "wf_api_token": "Your Own Token",
+    "wf_db_file": "wordfence_production_db.json",
+    "wf_db_url": "https://www.wordfence.com/api/intelligence/v3/vulnerabilities/production",
+    "wf_db_max_age_hours": 72,
+    "wp_plugin_download_url": "https://downloads.wordpress.org/plugin/{slug}.{version}.zip",
+    "wp_theme_download_url": "https://downloads.wordpress.org/theme/{slug}.{version}.zip",
+    "wp_plugin_info_url": "https://api.wordpress.org/plugins/info/1.0/{slug}.json",
+    "request_delay_seconds": 1.0,
+    "max_retries": 3,
+    "retry_backoff_factor": 2.0,
+    "container_startup_timeout": 300,
+    "default_output_dir": "./verified_packages"
+}

@@ -21,15 +21,9 @@ env/
 Thumbs.db
 .DS_Store
 
-# Project specific
-wpnf_tmp/
-.wpnf_tmp/
-verified_packages/
-wordfence_production_db.json
-*.zip
-*.log
-*.jsonl
+# Test data
+test_yamls/
+test_yamls - Copy/
 
 # Secrets
-config.json
 *.env
